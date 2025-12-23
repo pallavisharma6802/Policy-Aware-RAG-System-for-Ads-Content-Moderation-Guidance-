@@ -20,7 +20,6 @@ def extract_sections(content: str) -> List[Dict]:
     current_level = None
     current_text = []
     section_stack = []
-    level_stack = []
     
     for line in lines:
         h2_match = re.match(r'\[SECTION-H2\]\s+(.+)', line)
@@ -38,7 +37,6 @@ def extract_sections(content: str) -> List[Dict]:
             current_section = h2_match.group(1)
             current_level = 'H2'
             section_stack = [current_section]
-            level_stack = ['H2']
             current_text = []
         
         elif h3_match:
@@ -52,7 +50,6 @@ def extract_sections(content: str) -> List[Dict]:
             
             h3_title = h3_match.group(1)
             section_stack = [section_stack[0] if section_stack else '', h3_title]
-            level_stack = ['H2', 'H3']
             current_section = h3_title
             current_level = 'H3'
             current_text = []
@@ -104,6 +101,7 @@ def create_chunks(sections: List[Dict], metadata: Dict, max_tokens: int = 500) -
                         'chunk_text': chunk_content,
                         'policy_section': section['section'],
                         'policy_section_level': section['level'],
+                        'policy_path': hierarchy_text,
                         'doc_url': metadata['url'],
                         'platform': metadata['platform'],
                         'category': metadata['category']
@@ -124,6 +122,7 @@ def create_chunks(sections: List[Dict], metadata: Dict, max_tokens: int = 500) -
                     'chunk_text': chunk_content,
                     'policy_section': section['section'],
                     'policy_section_level': section['level'],
+                    'policy_path': hierarchy_text,
                     'doc_url': metadata['url'],
                     'platform': metadata['platform'],
                     'category': metadata['category']
@@ -137,6 +136,7 @@ def create_chunks(sections: List[Dict], metadata: Dict, max_tokens: int = 500) -
                 'chunk_text': chunk_text,
                 'policy_section': section['section'],
                 'policy_section_level': section['level'],
+                'policy_path': hierarchy_text,
                 'doc_url': metadata['url'],
                 'platform': metadata['platform'],
                 'category': metadata['category']

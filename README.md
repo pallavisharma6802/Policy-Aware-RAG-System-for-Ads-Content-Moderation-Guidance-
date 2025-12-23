@@ -173,13 +173,18 @@ PolicyChunk:
   - chunk_index (integer)
   - chunk_text (text, source of truth)
   - policy_source (enum: google)
-  - policy_section (string, indexed)
+  - policy_section (string, indexed, leaf section title)
   - policy_section_level (string: H2, H3)
+  - policy_path (string, indexed, full hierarchy path)
   - region (enum: global, us, eu, uk)
   - content_type (enum: ad_text, image, video, landing_page, general)
   - effective_date (datetime, nullable)
   - doc_url (string)
   - created_at (datetime)
+
+Constraints:
+  - UNIQUE(doc_id, chunk_index) - prevents duplicate chunks
+  - INDEX(doc_id, policy_section) - optimizes hybrid queries
 ```
 
 **Architecture:**

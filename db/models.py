@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Text, DateTime, Enum
+from sqlalchemy import Column, String, Integer, Text, DateTime, Enum, UniqueConstraint, Index
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
@@ -25,6 +25,10 @@ class ContentType(str, enum.Enum):
 
 class PolicyChunk(Base):
     __tablename__ = "policy_chunks"
+    __table_args__ = (
+        UniqueConstraint("doc_id", "chunk_index", name="uq_doc_chunkindex"),
+        Index("ix_doc_section", "doc_id", "policy_section"),
+    )
     
     chunk_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     doc_id = Column(String(255), nullable=False, index=True)
@@ -35,6 +39,7 @@ class PolicyChunk(Base):
     policy_source = Column(Enum(PolicySource), nullable=False, index=True)
     policy_section = Column(String(255), nullable=False, index=True)
     policy_section_level = Column(String(10), nullable=False)
+    policy_path = Column(String(512), nullable=False, index=True)
     
     region = Column(Enum(Region), nullable=False, default=Region.GLOBAL, index=True)
     content_type = Column(Enum(ContentType), nullable=False, default=ContentType.GENERAL, index=True)
