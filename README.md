@@ -56,11 +56,18 @@ app/
 └── citations.py       - Citation formatting
 
 tests/
-├── test_retrieval.py  - Retrieval correctness tests
-├── test_sql_filters.py - Metadata filtering tests
-├── test_grounding.py  - Citation validation tests
-├── test_refusal.py    - Refusal behavior tests
-└── test_api.py        - API endpoint tests
+├── test_db_constraints.py        - Database constraint enforcement
+├── test_required_fields.py        - NOT NULL and enum validation
+├── test_idempotent_ingestion.py  - Rerun safety tests
+├── test_embedding_dimensions.py   - 384-dim validation
+├── test_embedding_coverage.py     - PostgreSQL-Weaviate sync checks
+├── test_vector_id_alignment.py    - Weaviate ID == chunk_id validation
+├── test_rebuildability.py         - Rebuild Weaviate from PostgreSQL
+├── test_hybrid_retrieval_prep.py  - Metadata filtering in Weaviate
+├── test_retrieval_core.py         - Core hybrid retrieval correctness (16 tests)
+├── test_retrieval_edge_cases.py   - Edge cases and defensive programming (12 tests)
+├── test_retrieval_integration.py  - System integration validation (10 tests)
+└── test_retrieval_advanced.py     - Production quality checks (11 tests)
 
 docker/
 └── Dockerfile         - Container definition
@@ -447,9 +454,182 @@ Hybrid retrieval prep tests (3):
 - Metadata in both systems enables flexible retrieval strategies
 - System can be rebuilt from PostgreSQL anytime
 
-### Step 5: Hybrid Retrieval Logic (TODO)
+**Running tests:**
 
-Implement vector search + SQL filtering.
+```bash
+# Run all 22 tests
+python -m pytest tests/ -v
+
+# Run specific test category
+python -m pytest tests/test_embedding_coverage.py -v
+python -m pytest tests/test_db_constraints.py -v
+
+# Run with output
+python -m pytest tests/ -v -s
+```
+
+All tests pass in ~15 seconds. See test breakdown above for details on what each category validates.
+
+### Step 5: Hybrid Retrieval Logic (COMPLETED)
+
+Combine vector similarity search with SQL metadata filtering for accurate policy retrieval.
+
+**Implementation:**
+
+- `app/retrieval.py`: Hybrid retrieval with singleton pattern
+- `HybridRetriever` class: Orchestrates vector and SQL operations
+- `retrieve_policy_chunks()`: Public API for retrieval
+
+**Architecture:**
+
+- Vector search: Weaviate semantic similarity with all-MiniLM-L6-v2
+- SQL filtering: PostgreSQL metadata constraints (region, content_type, policy_source)
+- Overfetch strategy: Fetch 3x limit from vectors, then filter in SQL
+- Hierarchy reranking: Boost H3 (specific) over H2 (general) sections
+
+**Key design decisions:**
+
+1. **PostgreSQL as authoritative metadata filter**
+
+   - All filtering happens in SQL after vector retrieval
+   - Weaviate returns semantic candidates without constraints
+   - Ensures metadata correctness and rebuildability
+
+2. **Overfetch mechanism**
+
+   - Fetch `limit * 3` vectors before SQL filtering
+   - Compensates for candidates eliminated by metadata filters
+   - Prevents empty results when constraints are strict
+
+3. **Score calculation**
+
+   - Converts Weaviate distance to score: `1 / (1 + distance)`
+   - Produces positive, monotonic scores for stable ranking
+   - Avoids negative scores from naive `1 - distance` formula
+
+4. **Reranking before truncation**
+
+   - Apply hierarchy boost to all candidates
+   - Then truncate to final limit
+   - Ensures relevant H3 sections aren't lost to lower-ranked H2
+
+5. **Singleton retriever**
+
+   - Model loaded once and cached globally
+   - Avoids repeated 120M parameter model initialization
+   - Critical for API performance
+
+6. **Defensive enum handling**
+   - Strips whitespace: `region.strip().lower()`
+   - Converts to enum before SQL comparison
+   - Raises `ValueError` for invalid filter values
+
+**Retrieval flow:**
+
+```
+Query → Embed → Weaviate (semantic) → Overfetch candidates
+     → PostgreSQL (metadata filter) → Join on chunk_id
+     → Score conversion → Hierarchy reranking → Truncate to limit
+```
+
+**API:**
+
+```python
+retrieve_policy_chunks(
+    query: str,
+    limit: int = 5,
+    region: Optional[str] = None,          # "global", "us", "eu", "uk"
+    content_type: Optional[str] = None,     # "ad_text", "image", "video", etc.
+    policy_source: Optional[str] = None,    # "google"
+    prefer_specific: bool = True            # Prefer H3 over H2
+) -> List[Dict]
+```
+
+**Example usage:**
+
+```python
+# Basic semantic search
+results = retrieve_policy_chunks("Can I advertise alcohol?", limit=5)
+
+# With regional filter
+results = retrieve_policy_chunks(
+    "cryptocurrency ads rules",
+    limit=5,
+    region="global"
+)
+
+# Multiple filters (AND logic)
+results = retrieve_policy_chunks(
+    "advertising guidelines",
+    limit=10,
+    region="us",
+    content_type="ad_text",
+    policy_source="google"
+)
+```
+
+**Test suite (49 tests, all passing):**
+
+Core correctness tests (16):
+
+- Vector retrieval returns results
+- RetrievalResult schema completeness
+- SQL filtering enforcement (region, content_type, policy_source)
+- Overfetch mechanism prevents empty results
+- Vector ranking preserved after SQL filter
+- Hierarchy reranking (H3 vs H2)
+- Score monotonicity and validity
+- Deterministic retrieval
+
+Edge case tests (12):
+
+- No-results behavior (empty list, no crash)
+- Invalid filter handling (ValueError for bad enums)
+- Empty query handling
+- Extreme limits (0, 1, 1000)
+- Whitespace in filters
+- Very long queries
+
+Integration tests (10):
+
+- PostgreSQL-Weaviate ID alignment
+- No orphan vectors in Weaviate
+- Limit enforcement
+- Multi-filter conjunction (AND logic)
+- Semantic similarity correctness
+
+Advanced tests (11):
+
+- Overfetch recall protection
+- Policy path relevance
+- Latency budget (< 2s for 67 chunks)
+- Singleton pattern performance
+- Special characters and unicode handling
+
+**Running tests:**
+
+```bash
+# Run Step 5 retrieval tests (49 tests)
+python -m pytest tests/test_retrieval_*.py -v
+
+# Run all tests including Steps 1-4 (71 tests)
+python -m pytest tests/ -v
+```
+
+**Production fixes applied:**
+
+1. Limit validation: Returns empty list for `limit <= 0`
+2. Enum normalization: `.strip().lower()` before conversion
+3. Hierarchy boost parameter: `prefer_specific` properly threaded through
+4. SQL ordering comment: Documents that SQL preserves vector ranking
+
+**Why this architecture:**
+
+- Semantic search captures intent, SQL ensures correctness
+- PostgreSQL metadata is authoritative, never overridden by vector DB
+- Overfetch prevents silent failures when filters are restrictive
+- Hierarchy awareness surfaces specific rules before broad policies
+- Singleton pattern makes system production-ready
 
 ### Step 6: Generation Layer (TODO)
 
