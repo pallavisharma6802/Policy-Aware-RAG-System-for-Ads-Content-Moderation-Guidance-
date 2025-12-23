@@ -113,14 +113,14 @@ Replace `your_username` with your system username (run `whoami` to check).
 
 Download and structure policy documents from Google Ads.
 
-**What we built:**
+**Implementation:**
 
 - `ingestion/load_docs.py`: Web scraper with structure preservation
 - Extracted 5 Google Ads policy documents
 - Preserved HTML hierarchy (headers, bullets, sections)
 - Generated metadata (doc_id, platform, category, title, sections)
 
-**Key concepts:**
+**Technical concepts:**
 
 - BeautifulSoup for HTML parsing
 - Structure preservation for better chunking
@@ -158,7 +158,7 @@ data/raw_docs/
 
 Define structured metadata schema and create PostgreSQL database.
 
-**What we built:**
+**Implementation:**
 
 - `db/models.py`: SQLAlchemy ORM models with enums
 - `db/session.py`: Database connection and session management
@@ -169,10 +169,12 @@ Define structured metadata schema and create PostgreSQL database.
 ```python
 PolicyChunk:
   - chunk_id (UUID, primary key)
-  - doc_id (string, indexed)
+  - doc_id (string, indexed, versioned with date)
   - chunk_index (integer)
+  - chunk_text (text, source of truth)
   - policy_source (enum: google)
   - policy_section (string, indexed)
+  - policy_section_level (string: H2, H3)
   - region (enum: global, us, eu, uk)
   - content_type (enum: ad_text, image, video, landing_page, general)
   - effective_date (datetime, nullable)
@@ -180,10 +182,14 @@ PolicyChunk:
   - created_at (datetime)
 ```
 
-**Note:** `chunk_text` is stored in Weaviate (vector DB), not PostgreSQL. This maintains clean separation:
-- PostgreSQL: Metadata and filtering constraints
-- Weaviate: Text content and embeddings
-- Join on `chunk_id` during retrieval
+**Architecture:**
+
+PostgreSQL stores both metadata and canonical chunk text. Weaviate stores embeddings derived from this text. This design ensures:
+
+- PostgreSQL is the source of truth for all chunk data
+- Re-embedding, auditing, and debugging are possible without vector DB dependency
+- Weaviate can be rebuilt from PostgreSQL at any time
+- Both systems join on `chunk_id` during hybrid retrieval
 
 **Key concepts:**
 
@@ -191,8 +197,9 @@ PolicyChunk:
 - Indexes on filterable columns for query performance
 - UUID for globally unique identifiers
 - Nullable effective_date for version tracking
+- `region` and `content_type` currently default to GLOBAL/GENERAL; designed for future routing when region-specific policies are added
 
-**Why hybrid retrieval:**
+**Hybrid retrieval rationale:**
 
 1. Vector search finds semantically similar chunks
 2. SQL filters by region, content_type, policy_source
@@ -211,9 +218,112 @@ python -m db.init
 psql ads_policy_rag -c "\d policy_chunks"
 ```
 
-### Step 3: Chunking (TODO)
+### Step 3: Chunking (COMPLETED)
 
-Split policy documents into semantically coherent chunks.
+Split policy documents into semantically coherent chunks while preserving document hierarchy.
+
+**Implementation:**
+
+- `ingestion/chunk.py`: Section-based chunking with hierarchy preservation
+- Generated 67 chunks from 5 policy documents
+- Maintained document structure through hierarchy prefixes
+
+**Chunking strategy:**
+
+- Section-based splitting: Use `[SECTION-H2]` and `[SECTION-H3]` markers
+- Target size: 300-500 tokens per chunk
+- Hierarchy preservation: Prefix each chunk with its section path (e.g., "[Prohibited Content > Alcohol]")
+- Large section handling: Split sections exceeding token limit at sentence boundaries
+
+**Technical concepts:**
+
+- Semantic coherence: Keep related content together within sections
+- Context preservation: Include hierarchy prefix for better retrieval
+- Token estimation: Approximate token count using `words / 0.75` (assumes ~1.33 tokens/word for English text)
+- Metadata propagation: Carry doc_id, platform, category to each chunk
+
+**Design rationale:**
+
+1. Policies are hierarchically structured (sections, subsections)
+2. Splitting mid-section loses context
+3. Section boundaries are natural semantic breaks
+4. Hierarchy prefixes help LLM understand context during generation
+
+**Output format (JSON):**
+
+```json
+{
+  "chunk_id": "5f6826c1-e352-4996-8ca6-c9a704903e24",
+  "doc_id": "google_prohibited_2025-12-22",
+  "chunk_index": 0,
+  "chunk_text": "[Prohibited Content > Alcohol]\n\nAlcohol-related ads must...",
+  "policy_section": "Prohibited Content > Alcohol",
+  "policy_section_level": "H3",
+  "doc_url": "https://support.google.com/adspolicy/...",
+  "platform": "google",
+  "category": "prohibited"
+}
+```
+
+**Critical design decisions:**
+
+1. **Versioned doc_id**: `google_prohibited_2025-12-22` includes download date
+
+   - Enables temporal policy tracking
+   - Prevents overwriting when policies update
+   - Critical for compliance auditing
+
+2. **UUID chunk_id**: Generated at chunk creation (not database insertion)
+
+   - Stable identifier across PostgreSQL and Weaviate
+   - Enables reliable joins between metadata and vectors
+   - UUID format: RFC 4122 compliant
+
+3. **policy_section_level**: Stores H2 (top-level) or H3 (subsection)
+   - Distinguishes between major policies and sub-rules
+   - Enables hierarchical ranking in retrieval
+   - Example: H2 "Restricted Content" vs H3 "Alcohol"
+
+**Commands:**
+
+```bash
+python ingestion/chunk.py
+```
+
+**Files created:**
+
+```
+data/processed_chunks/
+├── google_overview_chunks.json (28 chunks)
+├── google_editorial_chunks.json (11 chunks)
+├── google_misrepresentation_chunks.json (11 chunks)
+├── google_restricted_chunks.json (8 chunks)
+└── google_prohibited_chunks.json (9 chunks)
+```
+
+**Statistics:**
+
+- Total chunks: 67
+- Average chunk size: ~400 tokens
+- All chunks preserve hierarchy context
+- Ready for embedding generation (Step 4)
+
+**Note on dataset size:**
+
+Current corpus (67 chunks from 5 Google Ads documents) is intentionally minimal to validate architecture and demonstrate system capabilities. This focused scope enables:
+
+- Clear demonstration of hybrid retrieval mechanics
+- Fast iteration during development
+- Proof of concept for production patterns
+
+Future expansion paths:
+
+- Meta Ads policies (~30-40 additional documents)
+- Regional policy variations (EU GDPR, UK-specific rules)
+- Appeals and enforcement guidelines
+- Platform-specific best practices
+
+The architecture is designed to scale from hundreds to millions of chunks without structural changes.
 
 ### Step 4: Embeddings & Vector Ingest (TODO)
 
@@ -270,32 +380,32 @@ deactivate
 
 ## Architecture Decisions
 
-### Why PostgreSQL?
+### PostgreSQL for Structured Metadata
 
 - ACID compliance for data integrity
 - Complex filtering with multiple conditions
 - Excellent JSON support for flexible metadata
 - Industry standard, proven at scale
 
-### Why Weaviate?
+### Weaviate for Vector Search
 
 - Purpose-built for vector similarity search
 - Fast approximate nearest neighbor search
 - Scales to millions of vectors
 - Production-ready with monitoring
 
-### Why Hybrid Retrieval?
+### Hybrid Retrieval Approach
 
 - Vector search alone: May return wrong region/type
-- SQL search alone: Can't understand semantic meaning
-- Hybrid: Best of both worlds
+- SQL search alone: Cannot understand semantic meaning
+- Hybrid: Combines semantic relevance with structural constraints
 
-### Why Local LLM (Llama-3)?
+### Local LLM (Llama-3)
 
-- No API costs
-- Data privacy (no external calls)
-- Deterministic behavior
-- Fast inference on M3 Mac
+- No API costs for inference
+- Data privacy (no external API calls)
+- Deterministic behavior for testing
+- Efficient inference on Apple Silicon
 
 ## License
 

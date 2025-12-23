@@ -30,8 +30,11 @@ class PolicyChunk(Base):
     doc_id = Column(String(255), nullable=False, index=True)
     chunk_index = Column(Integer, nullable=False)
     
+    chunk_text = Column(Text, nullable=False)
+    
     policy_source = Column(Enum(PolicySource), nullable=False, index=True)
     policy_section = Column(String(255), nullable=False, index=True)
+    policy_section_level = Column(String(10), nullable=False)
     
     region = Column(Enum(Region), nullable=False, default=Region.GLOBAL, index=True)
     content_type = Column(Enum(ContentType), nullable=False, default=ContentType.GENERAL, index=True)
@@ -42,4 +45,4 @@ class PolicyChunk(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     
     def __repr__(self):
-        return f"<PolicyChunk(doc_id={self.doc_id}, section={self.policy_section}, region={self.region})>"
+        return f"<PolicyChunk(doc_id={self.doc_id}, section={self.policy_section}, level={self.policy_section_level})>"
