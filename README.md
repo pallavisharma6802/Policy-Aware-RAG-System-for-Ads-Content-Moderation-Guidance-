@@ -11,10 +11,6 @@ This system answers policy questions by:
 3. **Citing** sources with direct links to policy documents
 4. **Refusing** to answer when sources are insufficient (hallucination prevention)
 
-**Try it live:** `http://localhost:8000`
-
-![Web UI Screenshot](images/ui.png)
-
 ## Key Features
 
 - **Hybrid Retrieval**: Vector search (Weaviate) + SQL filtering (PostgreSQL)
