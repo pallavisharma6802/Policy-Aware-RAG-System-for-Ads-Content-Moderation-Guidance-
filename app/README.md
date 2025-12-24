@@ -357,7 +357,7 @@ DATABASE_URL=postgresql://user:pass@localhost:5432/policy_rag
 
 - Use GPU for faster LLM inference
 - Reduce `limit` parameter (fewer sources = faster)
-- Use smaller LLM model (qwen2.5:1.5b vs 3b)
+- Use smaller LLM model (qwen2.5:1.5b vs 4b)
 - Cache frequent queries
 
 **Throughput:**

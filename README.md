@@ -192,7 +192,7 @@ open htmlcov/index.html
 | **Database**         | PostgreSQL 15                            | Structured metadata storage |
 | **Vector DB**        | Weaviate 1.23                            | Semantic search             |
 | **Embeddings**       | sentence-transformers (all-MiniLM-L6-v2) | Text vectorization          |
-| **LLM**              | Ollama + Qwen 2.5 (3B)                   | Answer generation           |
+| **LLM**              | Ollama + Qwen3 (4B)                      | Answer generation           |
 | **API**              | FastAPI + Uvicorn                        | REST API server             |
 | **Frontend**         | Vanilla HTML/CSS/JS                      | Interactive web UI          |
 | **ORM**              | SQLAlchemy                               | Database interactions       |
@@ -205,7 +205,7 @@ open htmlcov/index.html
 - **Chunks**: ~67 indexed sections
 - **Vector Dimensions**: 384 (all-MiniLM-L6-v2)
 - **Query Latency**: 2-5 seconds
-- **Model Size**: Qwen 2.5 3B (~2GB)
+- **Model Size**: Qwen3 4B (~2.5GB)
 - **Test Coverage**: ~80% code coverage
 
 ## Example Queries
@@ -383,7 +383,7 @@ Volumes: postgres_data, weaviate_data, ollama_data
 
 **Ollama** (ollama/ollama:latest)
 
-- Local LLM inference (qwen2.5:3b)
+- Local LLM inference (qwen3:4b)
 - Auto-downloads model on startup
 - Health check: `/api/tags`
 
@@ -416,7 +416,7 @@ POSTGRES_USER=policy_user
 POSTGRES_PASSWORD=policy_pass
 
 # LLM
-OLLAMA_MODEL=qwen2.5:3b
+OLLAMA_MODEL=qwen3:4b
 
 # Application
 LOG_LEVEL=INFO

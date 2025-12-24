@@ -98,7 +98,7 @@ POSTGRES_USER=policy_user
 POSTGRES_PASSWORD=policy_pass
 
 # LLM Model
-OLLAMA_MODEL=qwen2.5:3b
+OLLAMA_MODEL=qwen3:4b
 
 # Logging
 LOG_LEVEL=INFO
