@@ -16,6 +16,7 @@ from app.citations import extract_citations, validate_citations, build_citations
 
 MIN_CONFIDENCE_SCORE = 0.25
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:4b")
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 
 POLICY_PROMPT = PromptTemplate(
     input_variables=["question", "sources"],
@@ -61,6 +62,7 @@ def format_sources(results: List[Dict]) -> str:
 def get_llm(model_name: Optional[str] = None) -> Ollama:
     return Ollama(
         model=model_name or OLLAMA_MODEL,
+        base_url=OLLAMA_HOST,
         temperature=0.05,
     )
 

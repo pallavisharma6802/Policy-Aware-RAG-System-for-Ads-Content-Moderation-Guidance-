@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Policy RAG System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #1a73e8;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+        }
+
+        button {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #1557b0;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #1a73e8;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #1a73e8;
+        }
+
+        .result.active {
+            display: block;
+        }
+
+        .result.refused {
+            border-left-color: #ea4335;
+            background: #fef7f7;
+        }
+
+        .result h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .answer {
+            margin-bottom: 20px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+
+        .citations {
+            margin-top: 20px;
+        }
+
+        .citations h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        .citation {
+            background: white;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .citation-path {
+            font-weight: 500;
+            color: #1a73e8;
+            margin-bottom: 4px;
+        }
+
+        .citation-url {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .citation-url a {
+            color: #1a73e8;
+            text-decoration: none;
+        }
+
+        .citation-url a:hover {
+            text-decoration: underline;
+        }
+
+        .metrics {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .metric {
+            display: flex;
+            gap: 5px;
+        }
+
+        .metric-label {
+            font-weight: 500;
+        }
+
+        .refusal-reason {
+            padding: 15px;
+            background: #fff3e0;
+            border-radius: 4px;
+            color: #e65100;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Policy-Aware RAG System</h1>
+        <p class="subtitle">Get accurate, cited answers about Google Ads policy compliance</p>
+
+        <form id="queryForm">
+            <div class="form-group">
+                <label for="query">Your Question</label>
+                <textarea 
+                    id="query" 
+                    name="query" 
+                    placeholder="Ask about Google Ads policies..."
+                    required
+                    maxlength="500"
+                ></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="limit">Number of Sources</label>
+                <select id="limit" name="limit">
+                    <option value="3">Top 3 results</option>
+                    <option value="5" selected>Top 5 results</option>
+                    <option value="10">Top 10 results</option>
+                </select>
+            </div>
+
+            <button type="submit" id="submitBtn">Ask Question</button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing your question...</p>
+        </div>
+
+        <div class="result" id="result">
+            <h2>Response</h2>
+            <div id="resultContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('queryForm');
+        const loading = document.getElementById('loading');
+        const result = document.getElementById('result');
+        const resultContent = document.getElementById('resultContent');
+        const submitBtn = document.getElementById('submitBtn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(form);
+            const data = {
+                query: formData.get('query'),
+                limit: parseInt(formData.get('limit')),
+            };
+
+            submitBtn.disabled = true;
+            loading.classList.add('active');
+            result.classList.remove('active', 'refused');
+
+            try {
+                const response = await fetch('/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data),
+                });
+
+                const responseData = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(responseData.detail || 'Request failed');
+                }
+
+                displayResult(responseData);
+            } catch (error) {
+                resultContent.innerHTML = `
+                    <div class="refusal-reason">
+                        Error: ${error.message}
+                    </div>
+                `;
+                result.classList.add('active', 'refused');
+            } finally {
+                loading.classList.remove('active');
+                submitBtn.disabled = false;
+            }
+        });
+
+        function displayResult(data) {
+            let html = '';
+
+            if (data.refused) {
+                result.classList.add('refused');
+                html += `
+                    <div class="refusal-reason">
+                        <strong>Request Refused:</strong><br>
+                        ${data.refusal_reason || 'No specific reason provided'}
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="answer">${escapeHtml(data.answer)}</div>
+                `;
+
+                if (data.citations && data.citations.length > 0) {
+                    html += '<div class="citations"><h3>Sources</h3>';
+                    data.citations.forEach((citation, index) => {
+                        console.log('Citation:', citation);
+                        html += `
+                            <div class="citation">
+                                <div class="citation-path">${index + 1}. ${escapeHtml(citation.policy_path)}</div>
+                                <div class="citation-url">`;
+                        
+                        if (citation.doc_url && citation.doc_url.startsWith('http')) {
+                            html += `<a href="${escapeHtml(citation.doc_url)}" target="_blank" rel="noopener noreferrer">
+                                        View Full Policy Document →
+                                    </a>`;
+                        } else {
+                            html += `<span style="color: #999;">Source: ${escapeHtml(citation.doc_id)}</span>`;
+                        }
+                        
+                        html += `</div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                }
+            }
+
+            if (data.latency_ms || data.num_tokens_generated) {
+                html += '<div class="metrics">';
+                if (data.num_tokens_generated) {
+                    html += `
+                        <div class="metric">
+                            <span class="metric-label">Tokens:</span>
+                            <span>${data.num_tokens_generated}</span>
+                        </div>
+                    `;
+                }
+                html += '</div>';
+            }
+
+            resultContent.innerHTML = html;
+            result.classList.add('active');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

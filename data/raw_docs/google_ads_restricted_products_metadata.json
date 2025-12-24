@@ -3,7 +3,7 @@
   "url": "https://support.google.com/adspolicy/answer/6014299",
   "platform": "google",
   "category": "restricted",
-  "downloaded_at": "2025-12-22T18:57:14.718842",
+  "downloaded_at": "2025-12-23T23:18:16.846982",
   "title": "Dangerous products or services - Advertising Policies Help",
   "sections": [
     {
@@ -54,5 +54,8 @@
       "section": "Advertising policies",
       "policy_level": "H2"
     }
-  ]
+  ],
+  "section_urls": {
+    "Recreational drugs": "https://support.google.com/adspolicy/answer/16114090"
+  }
 }

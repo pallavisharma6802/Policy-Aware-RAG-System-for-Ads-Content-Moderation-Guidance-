@@ -3,7 +3,7 @@
   "url": "https://support.google.com/adspolicy/answer/6008942",
   "platform": "google",
   "category": "overview",
-  "downloaded_at": "2025-12-22T18:57:08.700814",
+  "downloaded_at": "2025-12-23T23:18:11.412584",
   "title": "Google Ads policies - Advertising Policies Help",
   "sections": [
     {
@@ -150,5 +150,32 @@
       "section": "Advertising policies",
       "policy_level": "H2"
     }
-  ]
+  ],
+  "section_urls": {
+    "Counterfeit goods": "https://support.google.com/adspolicy/answer/176017",
+    "Dangerous products or services": "https://support.google.com/adspolicy/answer/6014299",
+    "Enabling dishonest behavior": "https://support.google.com/adspolicy/answer/6016086",
+    "Inappropriate content": "https://support.google.com/adspolicy/answer/6015406",
+    "Abusing the ad network": "https://support.google.com/adspolicy/answer/6020954",
+    "Data collection and use": "https://support.google.com/adspolicy/answer/6020956",
+    "Misrepresentation": "https://support.google.com/adspolicy/answer/6020955",
+    "Ad protections for children and teens": "https://support.google.com/adspolicy/answer/15416897",
+    "Sexual content": "https://support.google.com/adspolicy/answer/6023699",
+    "Alcohol": "https://support.google.com/adspolicy/answer/6012382",
+    "Copyrights": "https://support.google.com/adspolicy/answer/6018015",
+    "Gambling and games": "https://support.google.com/adspolicy/answer/6018017",
+    "Healthcare and medicines": "https://support.google.com/adspolicy/answer/176031",
+    "Political content": "https://support.google.com/adspolicy/answer/6014595",
+    "Financial products and services": "https://support.google.com/adspolicy/answer/2464998",
+    "Cryptocurrencies and related products": "https://support.google.com/adspolicy/answer/14009787",
+    "Trademarks": "https://support.google.com/adspolicy/answer/6118",
+    "Legal requirements": "https://support.google.com/adspolicy/answer/6023676",
+    "Other restricted businesses": "https://support.google.com/adspolicy/answer/6368711",
+    "Restricted ad formats and features": "https://support.google.com/adspolicy/answer/9481382",
+    "Limited ad serving": "https://support.google.com/adspolicy/answer/13889491",
+    "Editorial": "https://support.google.com/adspolicy/answer/6021546",
+    "Destination requirements": "https://support.google.com/adspolicy/answer/6368661",
+    "Technical requirements": "https://support.google.com/adspolicy/answer/6088505",
+    "About our policies": "https://support.google.com/adspolicy/answer/6023676"
+  }
 }

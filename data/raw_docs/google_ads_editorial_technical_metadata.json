@@ -3,7 +3,7 @@
   "url": "https://support.google.com/adspolicy/answer/6021546",
   "platform": "google",
   "category": "editorial",
-  "downloaded_at": "2025-12-22T18:57:20.000356",
+  "downloaded_at": "2025-12-23T23:18:22.744290",
   "title": "Editorial - Advertising Policies Help",
   "sections": [
     {
@@ -66,5 +66,9 @@
       "section": "Advertising policies",
       "policy_level": "H2"
     }
-  ]
+  ],
+  "section_urls": {
+    "In this article:": "https://support.google.com/adspolicy/answer/6021546#335",
+    "Image quality": "https://support.google.com/adspolicy/answer/14848199"
+  }
 }

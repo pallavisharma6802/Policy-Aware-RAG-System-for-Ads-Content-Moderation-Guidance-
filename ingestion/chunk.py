@@ -4,6 +4,28 @@ import uuid
 from pathlib import Path
 from typing import List, Dict
 
+def get_policy_url(section_name: str, metadata: Dict) -> str:
+    """
+    Returns the specific policy URL for a section from metadata,
+    otherwise returns the default document URL.
+    
+    First checks exact match, then checks if section name is contained in any key.
+    """
+    section_urls = metadata.get('section_urls', {})
+    
+    # Try exact match first
+    if section_name in section_urls:
+        return section_urls[section_name]
+    
+    # Try partial match (case-insensitive)
+    section_lower = section_name.lower()
+    for key, url in section_urls.items():
+        if section_lower in key.lower() or key.lower() in section_lower:
+            return url
+    
+    # Fall back to document URL
+    return metadata['url']
+
 def load_markdown_file(filepath: Path) -> str:
     with open(filepath, 'r', encoding='utf-8') as f:
         return f.read()
@@ -82,6 +104,9 @@ def create_chunks(sections: List[Dict], metadata: Dict, max_tokens: int = 500) -
         hierarchy_text = ' > '.join(filter(None, section['hierarchy']))
         chunk_text = f"[{hierarchy_text}]\n\n{text}"
         
+        # Get section-specific URL from metadata or fall back to document URL
+        section_url = get_policy_url(section['section'], metadata)
+        
         estimated_tokens = len(chunk_text.split()) / 0.75
         
         if estimated_tokens > max_tokens:
@@ -102,7 +127,7 @@ def create_chunks(sections: List[Dict], metadata: Dict, max_tokens: int = 500) -
                         'policy_section': section['section'],
                         'policy_section_level': section['level'],
                         'policy_path': hierarchy_text,
-                        'doc_url': metadata['url'],
+                        'doc_url': section_url,
                         'platform': metadata['platform'],
                         'category': metadata['category']
                     })
@@ -123,7 +148,7 @@ def create_chunks(sections: List[Dict], metadata: Dict, max_tokens: int = 500) -
                     'policy_section': section['section'],
                     'policy_section_level': section['level'],
                     'policy_path': hierarchy_text,
-                    'doc_url': metadata['url'],
+                    'doc_url': section_url,
                     'platform': metadata['platform'],
                     'category': metadata['category']
                 })
@@ -137,7 +162,7 @@ def create_chunks(sections: List[Dict], metadata: Dict, max_tokens: int = 500) -
                 'policy_section': section['section'],
                 'policy_section_level': section['level'],
                 'policy_path': hierarchy_text,
-                'doc_url': metadata['url'],
+                'doc_url': section_url,
                 'platform': metadata['platform'],
                 'category': metadata['category']
             })

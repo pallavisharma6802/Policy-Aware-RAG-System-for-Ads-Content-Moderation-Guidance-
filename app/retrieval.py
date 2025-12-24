@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, Optional
 from dataclasses import dataclass
 import sys
+import os
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
@@ -11,7 +12,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from db.session import SessionLocal
 from db.models import PolicyChunk, PolicySource, Region, ContentType
 
-WEAVIATE_URL = "http://localhost:8080"
+WEAVIATE_URL = os.getenv("WEAVIATE_URL", "http://localhost:8080")
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 _retriever_instance = None
@@ -30,6 +31,7 @@ class RetrievalResult:
     policy_path: str
     policy_section_level: str
     doc_id: str
+    doc_url: str
     policy_source: str
     region: str
     content_type: str
@@ -43,6 +45,7 @@ class RetrievalResult:
             "policy_path": self.policy_path,
             "policy_section_level": self.policy_section_level,
             "doc_id": self.doc_id,
+            "doc_url": self.doc_url,
             "policy_source": self.policy_source,
             "region": self.region,
             "content_type": self.content_type,
@@ -70,6 +73,7 @@ class HybridRetriever:
                 "policy_path",
                 "policy_section_level",
                 "doc_id",
+                "doc_url",
                 "policy_source",
                 "region",
                 "content_type",
@@ -159,6 +163,7 @@ class HybridRetriever:
                     policy_path=chunk["policy_path"],
                     policy_section_level=chunk["policy_section_level"],
                     doc_id=chunk["doc_id"],
+                    doc_url=chunk.get("doc_url", ""),
                     policy_source=chunk["policy_source"],
                     region=chunk["region"],
                     content_type=chunk["content_type"],
@@ -210,7 +215,6 @@ def retrieve_policy_chunks(
 
 if __name__ == "__main__":
     print("Testing hybrid retrieval...")
-    print("=" * 70)
     print()
     
     queries = [

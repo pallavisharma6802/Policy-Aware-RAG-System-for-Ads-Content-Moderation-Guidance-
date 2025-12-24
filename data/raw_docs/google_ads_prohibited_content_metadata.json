@@ -3,7 +3,7 @@
   "url": "https://support.google.com/adspolicy/answer/6015406",
   "platform": "google",
   "category": "prohibited",
-  "downloaded_at": "2025-12-22T18:57:17.370245",
+  "downloaded_at": "2025-12-23T23:18:19.871349",
   "title": "Inappropriate content - Advertising Policies Help",
   "sections": [
     {
@@ -58,5 +58,6 @@
       "section": "Advertising policies",
       "policy_level": "H2"
     }
-  ]
+  ],
+  "section_urls": {}
 }

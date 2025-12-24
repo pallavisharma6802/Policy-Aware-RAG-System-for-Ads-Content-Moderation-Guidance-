@@ -3,6 +3,7 @@ from sentence_transformers import SentenceTransformer
 from sqlalchemy.orm import Session
 from typing import List, Dict
 import sys
+import os
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
@@ -10,7 +11,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from db.session import SessionLocal
 from db.models import PolicyChunk
 
-WEAVIATE_URL = "http://localhost:8080"
+WEAVIATE_URL = os.getenv("WEAVIATE_URL", "http://localhost:8080")
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 def get_weaviate_client() -> weaviate.Client:
@@ -37,6 +38,11 @@ def create_schema(client: weaviate.Client):
                 "name": "doc_id",
                 "dataType": ["text"],
                 "description": "Versioned document identifier"
+            },
+            {
+                "name": "doc_url",
+                "dataType": ["text"],
+                "description": "URL to the source policy document"
             },
             {
                 "name": "policy_section",
@@ -107,6 +113,7 @@ def ingest_chunks(client: weaviate.Client, chunks: List[PolicyChunk], embeddings
                 "chunk_id": str(chunk.chunk_id),
                 "chunk_text": chunk.chunk_text,
                 "doc_id": chunk.doc_id,
+                "doc_url": chunk.doc_url if chunk.doc_url else "",
                 "policy_section": chunk.policy_section,
                 "policy_path": chunk.policy_path,
                 "policy_section_level": chunk.policy_section_level,

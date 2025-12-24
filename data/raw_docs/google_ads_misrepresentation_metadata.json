@@ -3,7 +3,7 @@
   "url": "https://support.google.com/adspolicy/answer/6020955",
   "platform": "google",
   "category": "misrepresentation",
-  "downloaded_at": "2025-12-22T18:57:11.758264",
+  "downloaded_at": "2025-12-23T23:18:14.141750",
   "title": "Misrepresentation - Advertising Policies Help",
   "sections": [
     {
@@ -62,5 +62,8 @@
       "section": "Advertising policies",
       "policy_level": "H2"
     }
-  ]
+  ],
+  "section_urls": {
+    "Clickbait ads": "https://support.google.com/adspolicy/answer/15936667"
+  }
 }
