@@ -21,18 +21,6 @@ Query → Retrieval → Citations → Generation → Response
 
 Hybrid retrieval combining semantic search and metadata filtering.
 
-**Key class: `HybridRetriever`**
-
-```python
-retriever = HybridRetriever()
-results = retriever.search(
-    query="Can I advertise alcohol?",
-    limit=5,
-    region="Global",
-    content_type="Advertising Policy"
-)
-```
-
 **Features:**
 
 - **Semantic search**: Vector similarity via Weaviate
@@ -120,24 +108,6 @@ LLM Answer → Extract IDs → Validate Against Sources → Build Response
 "SOURCE 123"    ["123"]      Check if 123 in sources    {chunk_id: "123", ...}
 ```
 
-**Example:**
-
-```python
-from app.citations import extract_citations, validate_citations, build_citations
-
-# LLM output with citations
-answer = "Alcohol ads are restricted. SOURCE google_ads_overview_chunk_005"
-
-# Extract
-citations = extract_citations(answer)  # ["google_ads_overview_chunk_005"]
-
-# Validate
-valid = validate_citations(citations, retrieved_sources)
-
-# Build
-citation_objects = build_citations(valid, retrieved_sources)
-# [{"chunk_id": "...", "policy_path": "...", "doc_url": "..."}]
-```
 
 **Hallucination prevention:**
 
@@ -149,23 +119,6 @@ citation_objects = build_citations(valid, retrieved_sources)
 
 LLM-based answer generation with refusal detection.
 
-**Key function: `generate_policy_response()`**
-
-```python
-from app.generation import generate_policy_response
-
-response = generate_policy_response(
-    query="Can I advertise alcohol?",
-    limit=5,
-    region="Global"
-)
-
-print(response.answer)        # LLM-generated answer
-print(response.refused)       # True if LLM refused
-print(response.citations)     # List of citation objects
-print(response.latency_ms)    # Response time
-```
-
 **Generation pipeline:**
 
 1. **Retrieve** relevant chunks
@@ -176,26 +129,6 @@ print(response.latency_ms)    # Response time
 6. **Validate** citations against sources
 7. **Detect** refusal patterns
 8. **Build** response object
-
-**Prompt template:**
-
-```
-You are a policy expert for Google Ads.
-
-SOURCES:
-SOURCE google_ads_overview_chunk_005:
-Alcohol advertising requires certification...
-
-RULES:
-1. Answer ONLY using the sources above
-2. Cite sources using: SOURCE <chunk_id>
-3. If sources don't contain enough information, say:
-   "I cannot provide a confident answer based on the provided sources."
-
-QUESTION: {query}
-
-ANSWER:
-```
 
 **Refusal detection:**
 Checks for phrases indicating insufficient information:
@@ -232,53 +165,9 @@ llm = Ollama(
 )
 ```
 
-**Example responses:**
-
-**Successful answer:**
-
-```python
-PolicyResponse(
-    answer="Alcohol advertising is allowed but requires certification...",
-    refused=False,
-    citations=[
-        {"chunk_id": "...", "policy_path": "Alcohol", "doc_url": "..."}
-    ],
-    refusal_reason=None,
-    latency_ms=2543.2,
-    num_tokens_generated=87
-)
-```
-
-**Refusal:**
-
-```python
-PolicyResponse(
-    answer="I cannot provide a confident answer based on the provided sources.",
-    refused=True,
-    citations=[],
-    refusal_reason="LLM determined sources insufficient to answer query",
-    latency_ms=1823.1,
-    num_tokens_generated=23
-)
-```
-
 ### 4. Schemas (`schemas.py`)
 
 Data classes for type safety across the pipeline.
-
-```python
-from app.schemas import PolicyResponse
-
-# Response structure
-@dataclass
-class PolicyResponse:
-    answer: str
-    refused: bool
-    citations: List[dict]
-    refusal_reason: Optional[str]
-    latency_ms: float
-    num_tokens_generated: int
-```
 
 ## Usage Examples
 
@@ -391,28 +280,6 @@ response.refusal_reason = "LLM determined sources insufficient"
 # Only valid citations included in response
 ```
 
-## Testing
-
-```bash
-# Test retrieval
-python -c "
-from app.retrieval import retrieve_policy_chunks
-results = retrieve_policy_chunks('alcohol', limit=3)
-print(f'Found {len(results)} results')
-for r in results:
-    print(f'  {r.policy_section}: {r.score:.3f}')
-"
-
-# Test generation
-python -c "
-from app.generation import generate_policy_response
-response = generate_policy_response('Can I advertise gambling?', limit=3)
-print(f'Refused: {response.refused}')
-print(f'Answer: {response.answer[:100]}...')
-print(f'Citations: {len(response.citations)}')
-"
-```
-
 ## Architecture Decisions
 
 **Why hybrid retrieval?**
@@ -458,65 +325,3 @@ print(f'Citations: {len(response.citations)}')
 - `tests/test_retrieval_integration.py` - Integration tests
 - `tests/test_api_endpoints.py` - End-to-end API tests
 
-**Dependencies:**
-
-- `db/` - PostgreSQL session and models
-- `ingestion/` - Data must be indexed first
-- Weaviate - Vector search service
-- Ollama - LLM inference service
-
-## Advanced Usage
-
-### Custom LLM
-
-```python
-from app.generation import generate_policy_response, get_llm
-
-# Use different model
-custom_llm = get_llm(model_name="llama2:7b")
-response = generate_policy_response(
-    query="alcohol rules",
-    llm=custom_llm
-)
-```
-
-### Retriever Singleton
-
-```python
-from app.retrieval import get_retriever
-
-# Reuses same retriever instance (model loaded once)
-retriever = get_retriever()
-results1 = retriever.search("alcohol", limit=5)
-results2 = retriever.search("gambling", limit=5)
-```
-
-### Score Threshold Tuning
-
-```python
-# In retrieval.py, adjust MIN_CONFIDENCE_SCORE
-MIN_CONFIDENCE_SCORE = 0.3  # Higher = stricter matching
-```
-
-## Debugging
-
-**Enable verbose logging:**
-
-```python
-import logging
-logging.basicConfig(level=logging.DEBUG)
-```
-
-**Inspect retrieved sources:**
-
-```python
-response = generate_policy_response(query, limit=5)
-# Check what was retrieved before LLM generation
-```
-
-**Test prompt template:**
-
-```python
-from app.generation import POLICY_PROMPT
-print(POLICY_PROMPT.template)
-```
